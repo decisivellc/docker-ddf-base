@@ -1,5 +1,3 @@
-# Copy the modern DDF base Dockerfile
-cat > Dockerfile << 'EOF'
 # Modern ARM64-compatible DDF Base Image
 # Recreates functionality from docker-ddf-base with modern dependencies
 
@@ -112,4 +110,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 \
 
 # Use the DDF entrypoint
 ENTRYPOINT ["/opt/entrypoint/entrypoint.sh"]
-EOF
