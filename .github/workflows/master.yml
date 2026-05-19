@@ -1,13 +1,16 @@
 name: Build and Push Multi-Arch Images
 
 on:
+  pull_request:
+    branches:
+      - master
   push:
     branches:
       - master
   workflow_dispatch:
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -40,22 +43,37 @@ jobs:
           install: true
 
       - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push multi-arch image (JDK ${{ matrix.jdk }})
+      - name: Build multi-arch image (JDK ${{ matrix.jdk }})
         uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
+          load: false
           build-args: |
             JAVA_BASE=${{ matrix.java_base }}
           tags: ${{ matrix.tags }}
           cache-from: type=gha,scope=jdk${{ matrix.jdk }}
           cache-to: type=gha,mode=max,scope=jdk${{ matrix.jdk }}
 
+      - name: Smoke-test image (JDK ${{ matrix.jdk }})
+        run: |
+          # Reload the locally-built image for one platform so we can run it.
+          docker buildx build \
+            --platform linux/amd64 \
+            --build-arg JAVA_BASE='${{ matrix.java_base }}' \
+            --load \
+            -t ddf-base-smoke:${{ matrix.jdk }} .
+          actual=$(docker run --rm --entrypoint java ddf-base-smoke:${{ matrix.jdk }} -version 2>&1 | head -1)
+          echo "Reported: $actual"
+          echo "$actual" | grep -q '"${{ matrix.jdk }}\.' || { echo "FAIL: expected JDK ${{ matrix.jdk }}, got $actual"; exit 1; }
+
       - name: Inspect multi-arch manifest (JDK ${{ matrix.jdk }})
+        if: github.event_name != 'pull_request'
         run: docker buildx imagetools inspect codice/ddf-base:jdk${{ matrix.jdk }}-latest
