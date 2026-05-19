@@ -27,7 +27,7 @@ ENV APP_LOG=<log_file>
 # Install application
 ```
 ## Features
-  * Oracle JDK8
+  * Azul Zulu OpenJDK 17 (tag `3.x`) or 21 (tag `4.x`); both pinned by digest. Pick the variant that matches your downstream DDF train.
   * [jq](https://stedolan.github.io/jq/) for processing json
   * curl
   * [props](https://github.com/oconnormi/props) tool for modifying properties files

@@ -9,6 +9,22 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - jdk: "17"
+            java_base: "azul/zulu-openjdk-alpine:17.0.19-17.66@sha256:7710ea650d0d685d6c9525c21ea89c37cf820393ab54bcc0eedbe5cbb85a09d8"
+            tags: |
+              codice/ddf-base:3.1
+              codice/ddf-base:3.1-jdk17
+              codice/ddf-base:jdk17-latest
+          - jdk: "21"
+            java_base: "azul/zulu-openjdk-alpine:21.0.11-21.50@sha256:50016a4365837ca6f36995f684545799c53d99cd762575eb63c0701d4fb79d00"
+            tags: |
+              codice/ddf-base:4.0
+              codice/ddf-base:4.0-jdk21
+              codice/ddf-base:jdk21-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,18 +45,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push multi-arch images
+      - name: Build and push multi-arch image (JDK ${{ matrix.jdk }})
         uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            codice/ddf-base:3.0
-            codice/ddf-base:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          build-args: |
+            JAVA_BASE=${{ matrix.java_base }}
+          tags: ${{ matrix.tags }}
+          cache-from: type=gha,scope=jdk${{ matrix.jdk }}
+          cache-to: type=gha,mode=max,scope=jdk${{ matrix.jdk }}
 
-      - name: Inspect multi-arch manifest
-        run: docker buildx imagetools inspect codice/ddf-base:3.0
-
+      - name: Inspect multi-arch manifest (JDK ${{ matrix.jdk }})
+        run: docker buildx imagetools inspect codice/ddf-base:jdk${{ matrix.jdk }}-latest

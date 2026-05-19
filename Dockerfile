@@ -1,12 +1,18 @@
+# Image refs are pinned by digest for reproducible builds.
+# Override JAVA_BASE at build time to produce JDK-specific variants
+# (default: JDK 17 for the 2.30.x / Alliance 1.17.x train; pass JDK 21 base for the 2.31+ train).
+ARG ARGBASH_IMAGE=matejak/argbash:2.7.1-1@sha256:37e6805e02a940229073654ba3249cfb92392a465c3d9b329008926ad0133e3f
+ARG JAVA_BASE=azul/zulu-openjdk-alpine:17.0.19-17.66@sha256:7710ea650d0d685d6c9525c21ea89c37cf820393ab54bcc0eedbe5cbb85a09d8
+
 # Generate commands from argbash templates
-FROM --platform=$BUILDPLATFORM matejak/argbash:2.7.1-1 AS argbash
+FROM --platform=$BUILDPLATFORM ${ARGBASH_IMAGE} AS argbash
 # Copy all templates including vendored create-cdm.m4 (eliminates external dependency)
 COPY argbash-templates/* /work/
 RUN ./build.sh
 
-# Create base for final image
-FROM azul/zulu-openjdk-alpine:17-latest AS base
-LABEL maintainer=oconnormi
+# Create base for final image.
+FROM ${JAVA_BASE} AS base
+LABEL maintainer=codice
 LABEL org.codice.application.type=ddf
 
 ENV ENTRYPOINT_HOME=/opt/entrypoint
